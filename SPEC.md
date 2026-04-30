@@ -17,6 +17,101 @@ JSON requires repeating keys for each object in an array. LMON defines a schema 
 
 ---
 
+## Macros (Text Preprocessing)
+
+LMON supports an optional **macro pre-processor** that runs before parsing. Macros allow you to define reusable text fragments, parameterized templates, and inline arithmetic expressions, reducing repetition and enabling dynamic LMON generation.
+
+**Note:** Macro expansion is a preprocessing step. Call `expand(input)` before `parse(expanded)` to use macros.
+
+### Simple Variable Macros
+
+Define a reusable text fragment on its own line, consumed during expansion:
+
+```
+%header = "(id,name,email)"
+%admin = "true"
+
+%header
+emp1:{1,Alice,alice@example.com,{admin}}
+```
+
+Expands to:
+```
+(id,name,email)
+emp1:{1,Alice,alice@example.com,true}
+```
+
+### Parameterized Macros
+
+Define a template with placeholders:
+
+```
+%row(id,name,email) = "{id,name,email}"
+
+data:%row(1,Alice,alice@example.com)
+```
+
+Expands to:
+```
+data:{1,Alice,alice@example.com}
+```
+
+Placeholders use `{param}` syntax and can be repeated or omitted (unused parameters are ignored).
+
+### Expression Macros
+
+Inline arithmetic expressions are evaluated safely:
+
+```
+%{2+3*4}      → 14
+%{10/2}       → 5
+%{10/4}       → 2.5
+```
+
+Integer results are displayed without decimals; float results show all significant digits. Operators are `+`, `-`, `*`, `/`, `%` (modulo) with standard precedence and support for parentheses and unary minus.
+
+**Expressions can reference macros:**
+
+```
+%n = "5"
+value:%{%n+1}  → value:6
+```
+
+### Spec-Defined Macros
+
+Built-in macros prefixed with `_` are always available:
+
+| Macro | Returns | Example |
+|-------|---------|---------|
+| `%_DATE_STR` | ISO 8601 date (YYYY-MM-DD) | `2026-04-30` |
+| `%_TIME_STR` | Time in HH:MM:SS | `14:35:22` |
+| `%_DATETIME_STR` | Full ISO 8601 datetime | `2026-04-30T14:35:22Z` |
+| `%_TIMESTAMP` | Unix timestamp (seconds) | `1746057322` |
+| `%_DAY_STR` | Day of week | `Wednesday` |
+| `%_UUID` | UUID v4 | `f47ac10b-58cc-4372-a567-0e02b2c3d479` |
+| `%_ENV(VAR)` | Environment variable | `%_ENV(HOME)` expands to env var value |
+
+**Note:** Spec macros are evaluated at expansion time (not at parse time), so each invocation captures the current datetime or a freshly generated UUID.
+
+### Macro Rules
+
+1. **Definition line syntax:**
+   - Simple: `%name = "body"`
+   - Parameterized: `%name(p1,p2) = "body with {p1} and {p2}"`
+   - Definition lines are consumed during expansion (not in output)
+
+2. **Visibility:** Macros are only visible after their definition line. Pre-defined context (`initialContext`) is always visible from line 1.
+
+3. **Nesting:** Macro expansions are re-expanded, enabling macro-refs-macro patterns. Depth is limited to 16 to prevent circular references.
+
+4. **Forward references:** Referencing a macro before it's defined throws an error (unless `strict: false`).
+
+5. **Undefined macros:** Unknown macros throw an error in strict mode; in non-strict mode they are left as-is for later processing.
+
+6. **Circular detection:** If macro A references B and B references A, expansion throws an error.
+
+---
+
 ## Format Structure
 
 An LMON document consists of two optional parts:

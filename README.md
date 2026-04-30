@@ -123,6 +123,77 @@ See [SPEC.md](./SPEC.md) for the full grammar and edge cases.
 
 ---
 
+## Macros (Optional Preprocessing — [Full Docs](./MACROS.md))
+
+LMON supports optional **text-level macros** that run before parsing. Use macros to reduce repetition, define reusable fragments, and dynamically generate LMON.
+
+### Simple Macros
+
+```typescript
+import { expand, parse } from 'lmon';
+
+const lmonWithMacros = `
+%header = "(id,name,email)"
+%admin = "true"
+
+%header
+emp1:{1,Alice,alice@example.com,%admin}
+`;
+
+const expanded = expand(lmonWithMacros);
+// (id,name,email)
+// emp1:{1,Alice,alice@example.com,true}
+
+const parsed = parse(expanded);
+// { emp1: { id: 1, name: "Alice", email: "alice@example.com", admin: true } }
+```
+
+### Parameterized Macros
+
+```typescript
+const lmonWithMacros = `
+%row(id,name,email) = "{id,name,email}"
+
+(id,name,email)
+emp1:%row(1,Alice,alice@example.com)
+emp2:%row(2,Bob,bob@example.com)
+`;
+
+const expanded = expand(lmonWithMacros);
+// (id,name,email)
+// emp1:{1,Alice,alice@example.com}
+// emp2:{2,Bob,bob@example.com}
+```
+
+### Expressions & Built-In Macros
+
+```typescript
+const lmonWithMacros = `
+%count = "3"
+(id,name,count,date)
+{1,Alice,%{%count+10},%_DATE_STR}
+{2,Bob,%{%count+20},%_DATE_STR}
+`;
+
+const expanded = expand(lmonWithMacros);
+// (id,name,count,date)
+// {1,Alice,13,2026-04-30}
+// {2,Bob,23,2026-04-30}
+```
+
+**Built-in macros** (always available):
+- `%_DATE_STR` — current date (YYYY-MM-DD)
+- `%_TIME_STR` — current time (HH:MM:SS)
+- `%_DATETIME_STR` — full ISO 8601 datetime
+- `%_TIMESTAMP` — Unix timestamp in seconds
+- `%_DAY_STR` — day of week name
+- `%_UUID` — random UUID v4
+- `%_ENV(VAR)` — environment variable value
+
+See [SPEC.md](./SPEC.md) for complete macro syntax and rules.
+
+---
+
 ## LLM Integration
 
 To get LMON output from an LLM, include the schema and a short example in your system prompt:
