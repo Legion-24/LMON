@@ -3,7 +3,8 @@
 from .parser import parse, parse_to_ast
 from .stringifier import stringify
 from .json_bridge import to_json, from_json
-from .errors import LMONParseError, LMONStringifyError
+from .macro import expand, MacroContext, MacroDefinition, ExpandOptions
+from .errors import LMONParseError, LMONStringifyError, LMONMacroError
 from .ast_nodes import (
     LMONDocument,
     HeaderNode,
@@ -21,8 +22,13 @@ __all__ = [
     'stringify',
     'to_json',
     'from_json',
+    'expand',
+    'MacroContext',
+    'MacroDefinition',
+    'ExpandOptions',
     'LMONParseError',
     'LMONStringifyError',
+    'LMONMacroError',
     'LMONDocument',
     'HeaderNode',
     'LabelNode',

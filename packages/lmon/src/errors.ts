@@ -27,3 +27,25 @@ export class LMONStringifyError extends Error {
     Object.setPrototypeOf(this, LMONStringifyError.prototype);
   }
 }
+
+export class LMONMacroError extends Error {
+  public readonly line: number;
+
+  public readonly column: number;
+
+  public readonly macroName: string | undefined;
+
+  constructor(
+    message: string,
+    line: number,
+    column: number,
+    macroName?: string,
+  ) {
+    super(`[LMON MacroError at ${line}:${column}] ${message}`);
+    this.line = line;
+    this.column = column;
+    this.macroName = macroName;
+    this.name = 'LMONMacroError';
+    Object.setPrototypeOf(this, LMONMacroError.prototype);
+  }
+}

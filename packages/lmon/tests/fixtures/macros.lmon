@@ -1,0 +1,7 @@
+%header = "id,name,email,active"
+%admin = "true"
+%user = "false"
+%row(id,name,email,role) = "{id,name,email,%{if role == \"admin\" then %admin else %user}}"
+(%header)
+user1:{1,Alice,alice@example.com,%admin}
+user2:{2,Bob,bob@example.com,%user}

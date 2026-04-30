@@ -1,7 +1,8 @@
 export { parse, parseToAST } from './parser';
 export { stringify } from './stringifier';
 export { toJSON, fromJSON } from './json';
-export { LMONParseError, LMONStringifyError } from './errors';
+export { expand } from './macro';
+export { LMONParseError, LMONStringifyError, LMONMacroError } from './errors';
 export type {
   LMONDocument,
   HeaderNode,
@@ -15,3 +16,4 @@ export type {
   ParseOptions,
   StringifyOptions,
 } from './ast';
+export type { MacroContext, MacroDefinition, ExpandOptions } from './macro';
