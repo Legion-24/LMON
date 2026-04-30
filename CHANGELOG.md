@@ -1,16 +1,16 @@
 # Changelog
 
-All notable changes to XCON are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to XDON are documented in this file. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ---
 
 ## [1.0.0-beta.1] — Public-review beta
 
-This is the first public-review release of XCON. The text grammar, type-inference rules, output semantics, and reserved-character set are **proposed-frozen**: any further breaking changes before `1.0.0` final will be called out as `BETA-BREAKING` in this changelog and the relevant migration guidance will be added below. Please open issues with feedback before the `1.0.0` final tag.
+This is the first public-review release of XDON. The text grammar, type-inference rules, output semantics, and reserved-character set are **proposed-frozen**: any further breaking changes before `1.0.0` final will be called out as `BETA-BREAKING` in this changelog and the relevant migration guidance will be added below. Please open issues with feedback before the `1.0.0` final tag.
 
 ### What's stable in this beta
 
-- **XCON/text** — text format and parser (TypeScript and Python)
+- **XDON/text** — text format and parser (TypeScript and Python)
 - **JSON bridge** — `toJSON`/`fromJSON`
 - **Text macros** — `%`-preprocessor: variables, parameters, expressions, built-ins (`%_DATE_STR`, `%_TIME_STR`, `%_DATETIME_STR`, `%_TIMESTAMP`, `%_DAY_STR`, `%_UUID`, `%_ENV(VAR)`)
 
@@ -18,29 +18,29 @@ This is the first public-review release of XCON. The text grammar, type-inferenc
 
 The following layers are referenced in the spec for forward-compatibility planning but **are not implemented and not part of the v1.0 stability surface**:
 
-- BXCON binary encoding
-- XCON/schema validation
-- XCON/decorators (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`)
-- XCON/stream
-- Adapters (`xconFetch`, express, axios, prisma)
+- BXDON binary encoding
+- XDON/schema validation
+- XDON/decorators (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`)
+- XDON/stream
+- Adapters (`xdonFetch`, express, axios, prisma)
 
 These layers are reserved namespace-wise (via reserved leading characters `@`, `#`, `!`, `%`) so they can be added in v1.x or beyond without breaking v1.0 documents.
 
 ### How to give feedback
 
 - Read [SPEC.md](./SPEC.md), [MACROS.md](./MACROS.md), [README.md](./README.md).
-- Try both packages (`@legion24/xcon` and `xcon` on PyPI).
+- Try both packages (`@legion24/xdon` and `xdon` on PyPI).
 - Open an issue with: spec ambiguity, parser-vs-spec divergence, missing edge case, naming concerns, or extensibility concerns.
 
 ---
 
 ## Migration: 0.1.0 → 1.0.0-beta.1
 
-If you used `xcon` v0.1.0, the following changes are observable. Plan to update your inputs and code accordingly.
+If you used `xdon` v0.1.0, the following changes are observable. Plan to update your inputs and code accordingly.
 
 ### Breaking — input syntax
 
-1. **Reserved leading characters.** Bare values and labels can no longer begin with `@`, `#`, `!`, or `%`. Reserve these for future XCON layers (decorators, comments, directives, macros).
+1. **Reserved leading characters.** Bare values and labels can no longer begin with `@`, `#`, `!`, or `%`. Reserve these for future XDON layers (decorators, comments, directives, macros).
 
    Migration: quote the value (`"@user"`) or escape it (`\@user`).
 
@@ -85,7 +85,7 @@ expand(source, { envAllowlist: '*' });   // allow everything (NOT recommended fo
 
 ```python
 # Python
-from xcon import expand, ExpandOptions
+from xdon import expand, ExpandOptions
 expand(source, ExpandOptions(env_allowlist=['NODE_ENV', 'PORT']))
 expand(source, ExpandOptions(env_allowlist='*'))
 ```
@@ -128,7 +128,7 @@ Round-trip is now lossless for heterogeneous arrays-of-objects.
 
 In v0.1.0, an array of nested objects in a stringified output flattened to positional values, losing keys: `[{city:'NYC'}]` became `[['NYC']]` on round-trip. v1.0 emits a proper nested schema (`addrs[]:(city)`) and round-trips losslessly.
 
-### Breaking — cyclic input raises `XCONStringifyError`
+### Breaking — cyclic input raises `XDONStringifyError`
 
 v0.1.0 would silently recurse to a stack overflow. v1.0 detects cycles and raises a typed error.
 
@@ -139,7 +139,7 @@ v0.1.0 would silently recurse to a stack overflow. v1.0 detects cycles and raise
 parse(text)
 
 # after (v1.0)
-from xcon import parse, ParseOptions
+from xdon import parse, ParseOptions
 parse(text, ParseOptions(max_depth=64, max_length=16 * 1024 * 1024, max_rows=1_000_000))
 ```
 
@@ -147,12 +147,12 @@ The default behavior is unchanged. Pass `ParseOptions` only if you need to overr
 
 ### Breaking — Python public exports
 
-- `XCONDocument`, AST node types, etc. remain exported but should be considered **internal**. Public stable surface for v1.0 is: `parse`, `parse_to_ast`, `stringify`, `to_json`, `from_json`, `expand`, the three error classes, `ParseOptions`, `ExpandOptions`, `MacroDefinition`, `MacroContext`, `VERSION`.
+- `XDONDocument`, AST node types, etc. remain exported but should be considered **internal**. Public stable surface for v1.0 is: `parse`, `parse_to_ast`, `stringify`, `to_json`, `from_json`, `expand`, the three error classes, `ParseOptions`, `ExpandOptions`, `MacroDefinition`, `MacroContext`, `VERSION`.
 
 ### Non-breaking additions
 
 - New parser limits: `maxDepth` (default 64), `maxLength` (default 16 MiB), `maxRows` (default 1,000,000).
-- Optional `!XCON 1.0` version directive at the top of a document. Unknown `!`-directives error (this is the contract that lets future versions add directives safely).
+- Optional `!XDON 1.0` version directive at the top of a document. Unknown `!`-directives error (this is the contract that lets future versions add directives safely).
 - TypeScript exports `inferType`, `tokenize`, `Token`, `TokenType`, `VERSION`.
 - Python exports `ParseOptions`, `DEFAULT_MAX_DEPTH`, `DEFAULT_MAX_LENGTH`, `DEFAULT_MAX_ROWS`, `VERSION`.
 
@@ -172,5 +172,5 @@ The default behavior is unchanged. Pass `ParseOptions` only if you need to overr
 
 Initial development release. Not stability-guaranteed.
 
-[1.0.0-beta.1]: https://github.com/legion24/xcon/releases/tag/v1.0.0-beta.1
-[0.1.0]: https://github.com/legion24/xcon/releases/tag/v0.1.0
+[1.0.0-beta.1]: https://github.com/legion24/xdon/releases/tag/v1.0.0-beta.1
+[0.1.0]: https://github.com/legion24/xdon/releases/tag/v0.1.0

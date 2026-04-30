@@ -1,19 +1,19 @@
-# XCON Specification v1.0.0
+# XDON Specification v1.0.0
 
 > **Status: public-review beta (`1.0.0-beta.1`).** This document is the proposed v1.0 specification. The grammar, type-inference rules, output semantics, and reserved-character set are **proposed-frozen**: any change before the final v1.0 tag will be flagged in [CHANGELOG.md](./CHANGELOG.md) as `BETA-BREAKING`. We are actively soliciting feedback during the public-review window — please open an issue with concerns about ambiguity, edge cases, naming, or extensibility before the tag.
 
 ## Overview
 
-**XCON** (eXtensible Compact Object Notation) is a schema-ambient structured data format. The schema is declared once in a header, and the body carries only values, producing payloads typically 30–40% smaller than equivalent JSON text.
+**XDON** (eXtensible Compact Object Notation) is a schema-ambient structured data format. The schema is declared once in a header, and the body carries only values, producing payloads typically 30–40% smaller than equivalent JSON text.
 
-This document defines **XCON v1.0.0**, the stable text format. Once `1.0.0` final is tagged, conforming parsers will continue to accept v1.0.0 documents indefinitely. Future evolution happens through the reserved-character namespace (see [Extensibility](#extensibility-and-reserved-characters)) and through optional version directives (see [Version Directive](#version-directive)).
+This document defines **XDON v1.0.0**, the stable text format. Once `1.0.0` final is tagged, conforming parsers will continue to accept v1.0.0 documents indefinitely. Future evolution happens through the reserved-character namespace (see [Extensibility](#extensibility-and-reserved-characters)) and through optional version directives (see [Version Directive](#version-directive)).
 
-The XCON family also includes additional layers that are **not part of v1.0** and will be specified separately as they stabilize:
+The XDON family also includes additional layers that are **not part of v1.0** and will be specified separately as they stabilize:
 
-- **BXCON** — binary wire encoding *(planned)*
-- **XCON/schema** — schema declaration and validation *(planned)*
-- **XCON/decorators** — decorator macros (`@ref`, `@lazy`, etc.) *(planned)*
-- **XCON/stream** — streaming protocol *(planned)*
+- **BXDON** — binary wire encoding *(planned)*
+- **XDON/schema** — schema declaration and validation *(planned)*
+- **XDON/decorators** — decorator macros (`@ref`, `@lazy`, etc.) *(planned)*
+- **XDON/stream** — streaming protocol *(planned)*
 
 These layers are out of scope for v1.0.0. v1.0.0 specifies only the text format and the `%`-prefixed text-preprocessing macro layer.
 
@@ -29,7 +29,7 @@ These layers are out of scope for v1.0.0. v1.0.0 specifies only the text format 
 
 ## Encoding
 
-XCON documents **MUST** be encoded in **UTF-8**. A leading UTF-8 byte-order mark (BOM, `EF BB BF`) **MAY** be present and **MUST** be skipped by parsers; it is not part of the document content.
+XDON documents **MUST** be encoded in **UTF-8**. A leading UTF-8 byte-order mark (BOM, `EF BB BF`) **MAY** be present and **MUST** be skipped by parsers; it is not part of the document content.
 
 Other encodings are out of scope for v1.0.
 
@@ -37,7 +37,7 @@ Other encodings are out of scope for v1.0.
 
 ## Format Structure
 
-An XCON document consists of:
+An XDON document consists of:
 
 1. An **optional header** declaring the schema for all rows.
 2. A **body** of zero or more rows.
@@ -242,18 +242,18 @@ Inside quoted strings, escaping is only required for the delimiter and backslash
 
 ## Extensibility and Reserved Characters
 
-v1.0 reserves the following characters at the **leading position** of a bare scalar or label, for use by future XCON revisions and the planned XCON layers:
+v1.0 reserves the following characters at the **leading position** of a bare scalar or label, for use by future XDON revisions and the planned XDON layers:
 
 | Character | Reserved for |
 |-----------|--------------|
-| `@` | Decorator macros (XCON/decorators) |
+| `@` | Decorator macros (XDON/decorators) |
 | `#` | Comments |
 | `!` | Directives (e.g. version, encoding) |
 | `%` | Text-preprocessing macros (already defined in [MACROS.md](./MACROS.md)) |
 
 A v1.0 parser **MUST** reject any unquoted bare value or label that begins with one of these characters. To use these characters as ordinary content, **quote the value** (`"@user"`) or **escape it** (`\@user`).
 
-This reservation guarantees that future XCON versions can introduce syntax beginning with these characters without invalidating v1.0 documents — any v1.0 document that conforms to v1.0 will not accidentally collide with future syntax.
+This reservation guarantees that future XDON versions can introduce syntax beginning with these characters without invalidating v1.0 documents — any v1.0 document that conforms to v1.0 will not accidentally collide with future syntax.
 
 Other special characters (`$`, `&`, `*`, `;`, `?`) are **not** reserved at this time; they are valid in quoted strings and (where the grammar allows them) in bare values via escaping. A future major version (v2.0+) may reserve additional characters.
 
@@ -264,12 +264,12 @@ Other special characters (`$`, `&`, `*`, `;`, `?`) are **not** reserved at this 
 A document **MAY** begin with an optional version directive on its first line:
 
 ```
-!XCON 1.0
+!XDON 1.0
 ```
 
-- The directive starts with `!XCON` followed by a single space and a `MAJOR.MINOR` version.
+- The directive starts with `!XDON` followed by a single space and a `MAJOR.MINOR` version.
 - If present, it MUST be the first non-empty line, before any header.
-- v1.0 parsers MUST accept `!XCON 1.0` and `!XCON 1.x` for any non-negative `x`, and MAY reject other versions.
+- v1.0 parsers MUST accept `!XDON 1.0` and `!XDON 1.x` for any non-negative `x`, and MAY reject other versions.
 - v1.0 parsers MUST treat the absence of a directive as v1.0.
 
 Future versions may add additional `!`-prefixed directives. v1.0 parsers **MUST** reject any unknown `!`-directive (this is the contract that allows future directives to introduce semantics safely).
@@ -278,7 +278,7 @@ Future versions may add additional `!`-prefixed directives. v1.0 parsers **MUST*
 
 ## Output Semantics
 
-Given a parsed XCON document:
+Given a parsed XDON document:
 
 | Header | Row labels | Output shape |
 |--------|------------|--------------|
@@ -315,7 +315,7 @@ Exceeding any limit is a parse error. Implementations **MUST** expose these limi
 
 ```ebnf
 Document      = [ VersionDirective Newline ] [ Header Newline ] Body
-VersionDirective = "!XCON" Space Version
+VersionDirective = "!XDON" Space Version
 Version       = Digit+ "." Digit+
 
 Header        = "(" LabelList ")"
@@ -365,7 +365,7 @@ A v1.0 conforming parser:
 3. Reserves the leading characters `@`, `#`, `!`, `%` and rejects bare values/labels beginning with them.
 4. Encodes/decodes UTF-8.
 5. Enforces the parser limits described above.
-6. Does not require, but MAY recognize, the `!XCON 1.0` version directive.
+6. Does not require, but MAY recognize, the `!XDON 1.0` version directive.
 
 A v1.0 conforming serializer:
 
@@ -562,7 +562,7 @@ A bare leading `@` or `#` is rejected; quote or escape it.
 A reference parser implementation has three stages:
 
 1. **Tokenizer** — UTF-8 cursor scanner producing a token stream (parens, braces, brackets, colon, comma, newline, bare value, quoted string, array marker, EOF). Tokens carry line/column.
-2. **Parser** — recursive-descent consumer of the token stream, producing the AST nodes defined in this spec (`XCONDocument`, `Header`, `Body`, `Row`, `Document`, `Array`, `Value`, `Label`).
+2. **Parser** — recursive-descent consumer of the token stream, producing the AST nodes defined in this spec (`XDONDocument`, `Header`, `Body`, `Row`, `Document`, `Array`, `Value`, `Label`).
 3. **Evaluator** — walks the AST, applies the header schema, infers types on bare values, returns the final native object.
 
 Errors **MUST** report:
@@ -574,14 +574,14 @@ Errors **MUST** report:
 Reference error format:
 
 ```
-[XCON ParseError at 2:5] Expected '}' but got ',' (in row 'user1')
+[XDON ParseError at 2:5] Expected '}' but got ',' (in row 'user1')
 ```
 
 ---
 
 ## Versioning Policy
 
-XCON v1.0 is **stable**. The text grammar, type inference rules, output semantics, and reserved-character set defined in this document are frozen and will be honored by all future v1.x parsers.
+XDON v1.0 is **stable**. The text grammar, type inference rules, output semantics, and reserved-character set defined in this document are frozen and will be honored by all future v1.x parsers.
 
 - **Backward compatibility (v1.x)** — every v1.0 document parses identically under all v1.x parsers.
 - **Forward compatibility (v1.x → v1.0)** — v1.0 parsers will reject any v1.x document that uses syntax introduced after v1.0 (via the reserved-character mechanism or unknown `!`-directives), with a clear error.
@@ -623,13 +623,13 @@ Without a header, each row is an array; per-row arity may vary.
 
 ## Appendix B: Media Type
 
-The recommended media type for XCON documents is `application/xcon`. A media type registration is planned. Until registration is complete, the unregistered type is informational only.
+The recommended media type for XDON documents is `application/xdon`. A media type registration is planned. Until registration is complete, the unregistered type is informational only.
 
 For HTTP content negotiation:
 
 ```
-Accept: application/xcon, application/json;q=0.9
-Content-Type: application/xcon; charset=utf-8
+Accept: application/xdon, application/json;q=0.9
+Content-Type: application/xdon; charset=utf-8
 ```
 
 A `charset` parameter other than `utf-8` is ill-formed and SHOULD be rejected.

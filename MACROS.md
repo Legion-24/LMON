@@ -1,10 +1,10 @@
-# XCON Text-Preprocessing Macros v1.0
+# XDON Text-Preprocessing Macros v1.0
 
-XCON v1.0 ships with a text-level macro system — `%`-prefixed substitutions that run **before** the document is parsed. Macros enable templating, parameterized fragments, inline arithmetic, and access to a small set of built-in values.
+XDON v1.0 ships with a text-level macro system — `%`-prefixed substitutions that run **before** the document is parsed. Macros enable templating, parameterized fragments, inline arithmetic, and access to a small set of built-in values.
 
-> **Note.** Macros are an **opt-in preprocessing step**. They are not part of XCON's grammar; calling `parse(input)` on a document that contains macros will fail. Call `expand(input)` first, then `parse(expanded)`.
+> **Note.** Macros are an **opt-in preprocessing step**. They are not part of XDON's grammar; calling `parse(input)` on a document that contains macros will fail. Call `expand(input)` first, then `parse(expanded)`.
 
-> **Decorator macros** (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`) are **planned** for a future XCON layer (XCON/decorators) and are **not implemented in v1.0**. The `@` character is reserved at the leading position of bare values to enable that future layer; see [SPEC.md § Reserved Characters](./SPEC.md#extensibility-and-reserved-characters).
+> **Decorator macros** (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`) are **planned** for a future XDON layer (XDON/decorators) and are **not implemented in v1.0**. The `@` character is reserved at the leading position of bare values to enable that future layer; see [SPEC.md § Reserved Characters](./SPEC.md#extensibility-and-reserved-characters).
 
 ---
 
@@ -13,7 +13,7 @@ XCON v1.0 ships with a text-level macro system — `%`-prefixed substitutions th
 **TypeScript / JavaScript:**
 
 ```ts
-import { expand, parse } from '@legion24/xcon';
+import { expand, parse } from '@legion24/xdon';
 
 const source = `
 %header = "(name,age)"
@@ -28,7 +28,7 @@ const data = parse(expanded);
 **Python:**
 
 ```python
-from xcon import expand, parse
+from xdon import expand, parse
 
 source = '''
 %header = "(name,age)"
@@ -137,7 +137,7 @@ expand(source, { envAllowlist: ['NODE_ENV', 'PORT'] });
 **Python:**
 
 ```python
-from xcon import expand, ExpandOptions
+from xdon import expand, ExpandOptions
 expand(source, ExpandOptions(env_allowlist=['NODE_ENV', 'PORT']))
 ```
 
@@ -188,7 +188,7 @@ Increase the limit if needed (`maxDepth` / `max_depth` option), but most legitim
 By default (`strict: true`), unknown macros raise an error:
 
 ```
-expand("%missing")           // throws XCONMacroError: Undefined macro 'missing'
+expand("%missing")           // throws XDONMacroError: Undefined macro 'missing'
 ```
 
 In `strict: false`, unknown macros are left as-is so that downstream tooling may process them:
@@ -206,7 +206,7 @@ Defined macros still expand; only unknown ones are passed through.
 All macro errors carry line and column information:
 
 ```
-[XCON MacroError at 2:5] Undefined macro 'missing'
+[XDON MacroError at 2:5] Undefined macro 'missing'
 ```
 
 Common errors:
@@ -280,7 +280,7 @@ config:{%_ENV(NODE_ENV),localhost,false}
 ### TypeScript
 
 ```ts
-import { expand, ExpandOptions, MacroDefinition } from '@legion24/xcon';
+import { expand, ExpandOptions, MacroDefinition } from '@legion24/xdon';
 
 interface ExpandOptions {
   initialContext?: MacroContext;       // pre-defined macros visible from line 1
@@ -303,7 +303,7 @@ function expand(input: string, options?: ExpandOptions): string;
 ### Python
 
 ```python
-from xcon import expand, ExpandOptions, MacroDefinition
+from xdon import expand, ExpandOptions, MacroDefinition
 from typing import Optional
 
 @dataclass
@@ -328,7 +328,7 @@ def expand(input_text: str, options: Optional[ExpandOptions] = None) -> str: ...
 
 ### Why text-level?
 
-Macros operate on raw text before tokenization. This keeps the macro layer fully decoupled from XCON's grammar — the same engine can preprocess any text format.
+Macros operate on raw text before tokenization. This keeps the macro layer fully decoupled from XDON's grammar — the same engine can preprocess any text format.
 
 ### Why positional parameters?
 
@@ -344,7 +344,7 @@ A document author may write `id:%_UUID,backup_id:%_UUID` and expect two distinct
 
 ### Why is `%_ENV` opt-in?
 
-`%_ENV` reads process environment variables, including secrets. Allowing it by default would mean any XCON document from an untrusted source could exfiltrate secrets. v1.0 requires explicit opt-in via an allowlist.
+`%_ENV` reads process environment variables, including secrets. Allowing it by default would mean any XDON document from an untrusted source could exfiltrate secrets. v1.0 requires explicit opt-in via an allowlist.
 
 ---
 
@@ -369,5 +369,5 @@ A: Yes — the `maxDepth` cap prevents infinite recursion. Cycles raise `Macro e
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — XCON v1.0 text format specification
+- [SPEC.md](./SPEC.md) — XDON v1.0 text format specification
 - [README.md](./README.md) — quick start and overview

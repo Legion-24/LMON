@@ -3,7 +3,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "xcon/**/*.py"],
+      "outputs": ["dist/**", "xdon/**/*.py"],
       "cache": true
     },
     "test": {
