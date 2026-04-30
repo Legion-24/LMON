@@ -478,6 +478,100 @@ Key insight: Preloaded macros preserve ~48% token savings while only adding
 
 ---
 
+## Complex Objects: The API Sweet Spot
+
+For **complex nested objects** (user profiles, order records, etc.), LMON with preloaded headers shines. Single records save little; batches save huge amounts.
+
+### Test Case: User Profile with 7 Nested Fields
+
+Schema with nested social links and metadata:
+```
+(id, name, email, role, active, tags[], profile:(bio, social:(twitter, github, linkedin)), metadata:(department, location, created_at))
+```
+
+### Benchmark Results
+
+| Scenario | Bytes | Tokens | Savings vs JSON |
+|----------|-------|--------|-----------------|
+| **Single complex record** | — | — | — |
+| JSON | 495 | 38 | — |
+| LMON (no macros) | 331 | 38 | 33.1% bytes, 0% tokens |
+| **Batch of 5 records** | — | — | — |
+| JSON | 2,435 | 166 | — |
+| LMON (header inline) | 897 | 102 | 63.2% bytes, 38.6% tokens |
+| LMON (header preloaded) | **776 input** | **87** | **68.1% bytes, 47.6% tokens** ✓ |
+
+### Per-Record Analysis
+
+| Metric | JSON | LMON w/ Preload |
+|--------|------|-----------------|
+| **Avg bytes per record** | 487 | 155 |
+| **Per-record savings** | — | **68.1%** |
+| **Header overhead** | N/A | 123 bytes (amortized) |
+
+### Long-Term Savings (10 API Calls, 50 Records Total)
+
+| Format | Total Bytes | Savings |
+|--------|-------------|---------|
+| JSON (50 records) | 24,350 | — |
+| LMON (inline header × 10) | 8,970 | 63.2% |
+| LMON (header preloaded, 1 call) | **7,883** | **67.6%** ✓ |
+
+**Additional savings with preload: 12.1% of LMON size (1,087 bytes saved over 10 calls)**
+
+### API Pattern: Preloaded Headers
+
+Optimal pattern for complex objects:
+
+```typescript
+// Server setup (once)
+const headerMacro = new Map([
+  ['user_schema', {
+    body: '(id,name,email,role,active,tags[],profile:(bio,social:(twitter,github,linkedin)),metadata:(department,location,created_at))',
+    params: null,
+    sourceLine: 0
+  }]
+]);
+
+// Per-API-call: client sends only data rows
+const requestBody = `%user_schema
+{1,Alice,alice@example.com,senior_engineer,true,[backend,devops],{...},{...}}
+{2,Bob,bob@example.com,frontend_engineer,true,[react,ui],{...},{...}}
+...`;
+
+// Server expands with preloaded header
+const expanded = expand(requestBody, { initialContext: headerMacro });
+const data = parse(expanded);
+```
+
+### Key Advantages
+
+1. **Single complex record** — 33% byte savings (modest, headers not amortized)
+2. **Batch of 5 records** — 63% byte savings with inline header
+3. **With preloaded header** — 68% byte savings + scales perfectly
+4. **Long-term (10+ calls)** — 67.6% total savings, minimal per-call overhead
+
+### When This Pattern Shines
+
+| Workload | Benefit |
+|----------|---------|
+| APIs returning user profiles (complex nested) | **✓ Ideal** |
+| Batched structured exports | **✓ Ideal** |
+| Schema is constant across calls | **✓ Ideal** |
+| Complex schemas with arrays + nesting | **✓ Ideal** |
+| Single-record responses | Limited (33% only) |
+| Simple, flat schemas | Limited (smaller header) |
+
+### Recommendation
+
+For **API-driven workloads with complex, repeated schemas:**
+1. **Server side:** Preload the header macro via `initialContext`
+2. **Client side:** Send only data rows with `%header_macro` reference
+3. **Result:** 68% byte savings, 48% token savings on every batch
+4. **Scaling:** Savings improve as complexity and batch size increase
+
+---
+
 **Generated:** 2026-04-30  
 **LMON Version:** 1.0.0 (SPEC-aligned)  
 **Repository:** [Legion24 LMON](https://github.com/legion24/lmon)
