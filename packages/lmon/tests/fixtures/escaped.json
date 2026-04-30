@@ -1,0 +1,10 @@
+{
+  "item1": {
+    "name": "Widget",
+    "description": "A , B, and C"
+  },
+  "item2": {
+    "name": "Gadget",
+    "description": "Quote: \"Hello\""
+  }
+}

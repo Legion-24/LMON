@@ -1,0 +1,3 @@
+(name,age,active)
+alice:{Alice,30,true}
+bob:{Bob,25,false}

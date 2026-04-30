@@ -1,0 +1,3 @@
+(name,address:(city,zip))
+alice:{Alice,{NYC,10001}}
+bob:{Bob,{LA,90001}}

@@ -1,0 +1,9 @@
+{
+  "example": {
+    "string": "hello",
+    "integer": 42,
+    "float": 3.14,
+    "boolean": true,
+    "null_val": null
+  }
+}

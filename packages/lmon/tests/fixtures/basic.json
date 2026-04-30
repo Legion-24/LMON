@@ -1,0 +1,12 @@
+{
+  "alice": {
+    "name": "Alice",
+    "age": 30,
+    "active": true
+  },
+  "bob": {
+    "name": "Bob",
+    "age": 25,
+    "active": false
+  }
+}

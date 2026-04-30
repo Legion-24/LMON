@@ -1,0 +1,3 @@
+(name,tags[],verified)
+alice:{Alice,[admin,developer],true}
+bob:{Bob,[user],false}

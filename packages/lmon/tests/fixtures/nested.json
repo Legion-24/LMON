@@ -1,0 +1,16 @@
+{
+  "alice": {
+    "name": "Alice",
+    "address": {
+      "city": "NYC",
+      "zip": "10001"
+    }
+  },
+  "bob": {
+    "name": "Bob",
+    "address": {
+      "city": "LA",
+      "zip": "90001"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "alice": {
+    "name": "Alice",
+    "tags": ["admin", "developer"],
+    "verified": true
+  },
+  "bob": {
+    "name": "Bob",
+    "tags": ["user"],
+    "verified": false
+  }
+}
