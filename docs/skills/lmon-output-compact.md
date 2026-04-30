@@ -1,4 +1,11 @@
-# Claude Skill: LMON Output (Compact)
+---
+name: LMON Output (Compact)
+description: Token-efficient structured response format with 20-35% savings vs JSON
+type: skill
+tags: [lmon, token-efficiency, structured-data]
+---
+
+# LMON Output (Compact)
 
 Output LMON format (Language Model Object Notation) for token-efficient structured responses.
 
