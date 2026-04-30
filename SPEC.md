@@ -1,25 +1,37 @@
-# LMON Specification v0.1.0
+# XCON Specification v0.1.0
 
 ## Overview
 
-**LMON** (Language Model Object Notation) is a structured data format designed for efficient LLM output. It combines the readability of YAML with the token efficiency of optimized binary formats, making it ideal for structured responses from large language models.
+**XCON** (eXtensible Compact Object Notation) is a schema-ambient structured data format. It declares the schema once and carries only values in the body, producing payloads 30–40% smaller than JSON as text and up to 72% smaller in binary (BXCON).
+
+This document specifies the **XCON/text** layer — the human-readable text format. The full XCON stack also includes:
+
+- **BXCON** — binary wire encoding (replaces BSON, Protobuf, MessagePack)
+- **XCON/schema** — schema declaration and versioning (replaces JSON Schema, Avro)
+- **XCON/macros** — declarative decorator macros (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`) with cross-language callback bindings
+- **XCON/stream** — streaming protocol with row-label out-of-order reassembly
+- **XCON/lazy** — deferred field expansion via `@ref` and `@lazy`
+- **XCON/fed** — federated cross-server queries via macro composition
+
+See [README.md](./README.md) for the full layer-replacement table and [MACROS.md](./MACROS.md) for decorator macro semantics.
 
 ### Design Goals
 
-- **Token efficiency**: Minimize tokens compared to JSON by expressing structure once (header) and repeating only data (rows)
-- **LLM-friendly**: Human readable, easy for models to generate and parse
-- **Round-trippable**: Lossless conversion to/from JSON
-- **Simple grammar**: No complex escaping rules, minimal special syntax
+- **Schema ambience**: declare structure once (header), repeat only values (rows)
+- **Compactness**: 30–40% smaller than JSON in text; up to 72% smaller in BXCON
+- **Round-trippable**: lossless conversion to/from JSON
+- **Simple grammar**: no complex escaping, minimal special syntax — easy to read, easy to generate
+- **Universal applicability**: REST payloads, SQL result sets, LLM contexts, MCP, document storage, server-driven UI
 
 ### Motivation
 
-JSON requires repeating keys for each object in an array. LMON defines a schema once and repeats only values, reducing tokens per record. For an array of 100 user objects with 5 keys each, LMON saves ~60% of JSON's token overhead.
+JSON repeats keys for every object in an array. XCON declares the schema once and repeats only values. For an array of 100 user objects with 5 keys each, XCON saves ~60% of JSON's structural overhead — and with BXCON, additional savings come from typed-tag encoding instead of UTF-8 text.
 
 ---
 
 ## Macros (Text Preprocessing)
 
-LMON supports an optional **macro pre-processor** that runs before parsing. Macros allow you to define reusable text fragments, parameterized templates, and inline arithmetic expressions, reducing repetition and enabling dynamic LMON generation.
+XCON supports an optional **macro pre-processor** that runs before parsing. Macros allow you to define reusable text fragments, parameterized templates, and inline arithmetic expressions, reducing repetition and enabling dynamic XCON generation.
 
 **Note:** Macro expansion is a preprocessing step. Call `expand(input)` before `parse(expanded)` to use macros.
 
@@ -114,7 +126,7 @@ Built-in macros prefixed with `_` are always available:
 
 ## Format Structure
 
-An LMON document consists of two optional parts:
+An XCON document consists of two optional parts:
 
 1. **Header** (optional): First line defining the structure of all rows
 2. **Body** (required): Rows of data following the header schema
@@ -495,15 +507,15 @@ NestedSuffix = "(" LabelList ")"
 
 Body = Row+
 
-Row = [RowLabel ":"] LMONDocument
+Row = [RowLabel ":"] XCONDocument
 
 RowLabel = BareWord | QuotedString
 
-LMONDocument = "{" FieldValueList? "}"
+XCONDocument = "{" FieldValueList? "}"
 
 FieldValueList = FieldValue ("," FieldValue)*
 
-FieldValue = Scalar | LMONDocument | Array
+FieldValue = Scalar | XCONDocument | Array
 
 Scalar = BareWord | QuotedString | ""
 
@@ -525,8 +537,8 @@ EscapedChar = "\\" (. | "n" | "t")
 
 **Current Version**: 0.1.0
 
-This spec covers LMON v0.1.0. Future versions may add:
-- Format versioning header (e.g., `!LMON 1.0`)
+This spec covers XCON v0.1.0. Future versions may add:
+- Format versioning header (e.g., `!XCON 1.0`)
 - Comments
 - Streaming/incremental parsing
 
@@ -538,7 +550,7 @@ No backward compatibility is guaranteed for v0.x versions.
 
 ### Example 1: Simple User List
 
-**LMON**:
+**XCON**:
 ```
 (name,age,active)
 alice:{Alice,30,true}
@@ -555,7 +567,7 @@ bob:{Bob,25,false}
 
 ### Example 2: Array of Objects (No Row Labels)
 
-**LMON**:
+**XCON**:
 ```
 (name,role)
 {Alice,admin}
@@ -572,7 +584,7 @@ bob:{Bob,25,false}
 
 ### Example 3: Arrays in Data
 
-**LMON**:
+**XCON**:
 ```
 (name,tags[],verified)
 alice:{Alice,[admin,developer],true}
@@ -589,7 +601,7 @@ bob:{Bob,[user],false}
 
 ### Example 4: Nested Objects
 
-**LMON**:
+**XCON**:
 ```
 (name,address:(city,zip))
 alice:{Alice,{NYC,10001}}
@@ -606,7 +618,7 @@ bob:{Bob,{LA,90001}}
 
 ### Example 5: No Header (Array of Arrays)
 
-**LMON**:
+**XCON**:
 ```
 {Alice,30,true}
 {Bob,25,false}
@@ -622,7 +634,7 @@ bob:{Bob,{LA,90001}}
 
 ### Example 6: Complex Nesting
 
-**LMON**:
+**XCON**:
 ```
 (id,name,profile:(bio,social:(twitter,github)),active)
 user1:{1,Alice,{Senior Engineer,[twitter,github_user],true}
@@ -655,7 +667,7 @@ user2:{2,Bob,{Product Manager,[],[],false}
 
 ### Example 7: Escaped Values
 
-**LMON**:
+**XCON**:
 ```
 (name,description)
 item1:{Widget,"A \, B, and C"}
@@ -672,7 +684,7 @@ item2:{Gadget,"Quote: \"Hello\""}
 
 ### Example 8: Empty Values
 
-**LMON**:
+**XCON**:
 ```
 (name,email,phone)
 user1:{Alice,,555-1234}
@@ -689,7 +701,7 @@ user2:{Bob,bob@example.com,}
 
 ### Example 9: All Types
 
-**LMON**:
+**XCON**:
 ```
 (string,integer,float,boolean,null_val)
 example:{hello,42,3.14,true,null}
@@ -719,7 +731,7 @@ example:{hello,42,3.14,true,null}
 ]
 ```
 
-**LMON (38 tokens - 47% savings)**:
+**XCON (38 tokens - 47% savings)**:
 ```
 (name,age,role)
 {Alice,30,admin}
@@ -755,7 +767,7 @@ Parsers MUST report:
 Example:
 
 ```
-LMONParseError at line 2, column 5:
+XCONParseError at line 2, column 5:
   Expected '}' to close document but found ','
   user1:{name,age,,30}
               ^^
@@ -767,7 +779,7 @@ LMONParseError at line 2, column 5:
 
 ### Why No Indentation Syntax?
 
-LMON prioritizes compactness. Indentation adds minimal value for structured data and consumes tokens.
+XCON prioritizes compactness. Indentation adds minimal value for structured data and consumes tokens.
 
 ### Why Escape Instead of Unicode Escapes?
 
@@ -779,7 +791,7 @@ Headers define an ordered list of labels. Applying them positionally keeps the p
 
 ### Why No Comments?
 
-Comments would complicate the grammar and likely be unnecessary in LLM output. If tools need to annotate LMON, they can wrap it in a JSON object: `{"lmon": "...", "notes": "..."}`
+Comments would complicate the grammar and likely be unnecessary in LLM output. If tools need to annotate XCON, they can wrap it in a JSON object: `{"xcon": "...", "notes": "..."}`
 
 ---
 

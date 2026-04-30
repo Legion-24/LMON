@@ -1,12 +1,16 @@
-# LMON — Language Model Object Notation
+# XCON
 
-A token-efficient structured data format designed for LLM output. Define your schema once, repeat only values — not keys.
+> eXtensible Compact Object Notation — the universal data format for the schema-known world
+
+XCON is a schema-ambient structured data format. Because the schema is declared once and shared, payloads carry only values — no repeated keys, no structural overhead. This makes XCON 30–40% smaller than JSON as text and up to 72% smaller in binary (BXCON).
+
+XCON spans the full data stack: a compact text format, a binary wire encoding, schema declaration and versioning, a macro system with cross-language callback bindings, a streaming protocol, and a federation layer for cross-server queries.
 
 ---
 
-## Why LMON?
+## Why XCON?
 
-JSON repeats keys for every object in an array. LMON defines the schema once in a header and repeats only the data, saving tokens on every record.
+JSON repeats keys for every object in an array. XCON declares the schema once in a header and repeats only values, saving bytes (and tokens) on every record.
 
 **JSON** (107 tokens):
 ```json
@@ -17,7 +21,7 @@ JSON repeats keys for every object in an array. LMON defines the schema once in 
 ]
 ```
 
-**LMON** (74 tokens — 31% fewer):
+**XCON** (74 tokens — 31% fewer):
 ```
 (id,name,role,active)
 {1,Alice,admin,true}
@@ -25,83 +29,63 @@ JSON repeats keys for every object in an array. LMON defines the schema once in 
 {3,Carol,user,true}
 ```
 
-### Benchmark Results
-
-| Dataset | GPT-4 savings | Claude savings |
-|---------|--------------|----------------|
-| 1 record  | 19%  | 9%  |
-| 3 records | 31%  | 31% |
-| 20 records | 35% | —   |
-
-Token savings improve with dataset size. For batched, multi-record workloads the gains are significant. See [benchmarks.md](./benchmarks.md) for the full methodology and cost analysis.
+See [benchmarks.md](./benchmarks.md) for the full methodology and cost analysis.
 
 ---
 
-## Features
+## Layer Specification
 
-- **Token efficient** — 20–35% fewer tokens vs JSON for repeated-schema data
-- **Round-trippable** — lossless conversion to and from JSON
-- **Type inference** — bare values are typed automatically (`true`/`false`, integers, floats, `null`)
-- **Arrays & nesting** — full support for array fields and nested objects
-- **Simple grammar** — no complex escaping, easy for LLMs to generate reliably
+XCON is a stack of cooperating layers, each replacing existing technologies:
 
----
-
-## Installation
-
-**JavaScript / TypeScript**
-```bash
-npm install lmon
-```
-
-**Python**
-```bash
-pip install lmon
-```
+| Layer | Replaces |
+|-------|----------|
+| **XCON/text** | JSON, CSV, TOML |
+| **BXCON** (binary) | BSON, Protobuf, MessagePack |
+| **XCON/schema** | JSON Schema, Avro IDL |
+| **XCON/macros** | GraphQL resolvers, stored procedures, dbt |
+| **XCON/stream** | NDJSON, SSE, chunked JSON |
+| **XCON/lazy** | REST pagination, ORM lazy loading |
+| **XCON/fed** | Presto, Trino, ETL pipelines |
 
 ---
 
-## Usage
+## Use Cases
 
-### JavaScript / TypeScript
+### REST API payloads
+Schema declared at endpoint root, responses carry only values. Cuts payload size 30–40% and removes per-row JSON parsing overhead.
+*Replaces:* JSON-over-REST.
 
-```ts
-import { parseLMON, stringifyLMON } from 'lmon';
+### SQL result sets
+The query columns *are* the XCON header — a database result is XCON natively, no transcoding to JSON object-per-row.
+*Replaces:* JSON serialization of cursor results.
 
-// Stringify
-const data = [
-  { name: 'Alice', role: 'admin', active: true },
-  { name: 'Bob',   role: 'user',  active: false },
-];
+### LLM tool calls and context
+Schemas declared in the system prompt, tool calls and structured outputs encode only values. Reduces tokens per call by 20–35% and replaces verbose semi-XML system prompts.
+*Replaces:* JSON tool call format, ad-hoc XML-tagged context.
 
-const lmon = stringifyLMON(data);
-// (name,role,active)
-// {Alice,admin,true}
-// {Bob,user,false}
+### MCP protocol payloads
+Tool definitions and results travel as XCON. Header negotiation happens once at session start.
+*Replaces:* JSON-RPC body in MCP.
 
-// Parse
-const parsed = parseLMON(lmon);
-// [ { name: 'Alice', role: 'admin', active: true }, ... ]
-```
+### Binary wire encoding (BXCON)
+Header-prefix byte stream — type tags, varint lengths, no field names. 60–72% smaller than JSON, faster to decode than Protobuf when the schema is shared out-of-band.
+*Replaces:* BSON, Protobuf, MessagePack.
 
-### Python
+### Streaming result sets
+Header sent once, rows stream with row labels for out-of-order reassembly. Pause/resume without resync.
+*Replaces:* NDJSON, SSE-with-JSON-payloads, chunked JSON.
 
-```python
-from lmon import parse, stringify
+### Database storage format
+Document + relational hybrid: rows share a schema header, sub-documents nest under field declarations. Sharding works via root metadata + `@ref` expansion.
+*Replaces:* BSON in document stores; row-format in relational stores.
 
-data = [
-    {"name": "Alice", "role": "admin", "active": True},
-    {"name": "Bob",   "role": "user",  "active": False},
-]
+### Server-driven UI / component trees
+A component tree is just a typed tree. XCON encodes it with the schema as the component registry.
+*Replaces:* JSON component descriptors.
 
-lmon = stringify(data)
-# (name,role,active)
-# {Alice,admin,true}
-# {Bob,user,false}
-
-parsed = parse(lmon)
-# [{'name': 'Alice', 'role': 'admin', 'active': True}, ...]
-```
+### Federated cross-database queries
+A query result from one server can `@ref` another server. Macros compose across federation boundaries — the client lazily expands references on demand.
+*Replaces:* Presto, Trino, custom ETL.
 
 ---
 
@@ -113,115 +97,122 @@ alice:{Alice,[admin,developer],{NYC,10001}}
 bob:{Bob,[user],{LA,90001}}
 ```
 
-- **Header** `(...)` — defines field names and types once
+- **Header** `(...)` — declares field names and types once
 - **Row label** `alice:` — optional key; produces an object if present, array if absent
 - **Arrays** `[...]` — declared with `[]` suffix in the header
-- **Nested objects** `{...}` — declared with `(sub,fields)` suffix in the header
+- **Nested objects** `(sub,fields)` — sub-schemas declared inline
 - **Types** — inferred from bare values: `true`/`false`, integers, floats, `null`, strings
 
-See [SPEC.md](./SPEC.md) for the full grammar and edge cases.
+See [SPEC.md](./SPEC.md) for the full grammar.
 
 ---
 
-## Macros (Optional Preprocessing — [Full Docs](./MACROS.md))
+## Installation
 
-LMON supports optional **text-level macros** that run before parsing. Use macros to reduce repetition, define reusable fragments, and dynamically generate LMON.
-
-### Simple Macros
-
-```typescript
-import { expand, parse } from 'lmon';
-
-const lmonWithMacros = `
-%header = "(id,name,email)"
-%admin = "true"
-
-%header
-emp1:{1,Alice,alice@example.com,%admin}
-`;
-
-const expanded = expand(lmonWithMacros);
-// (id,name,email)
-// emp1:{1,Alice,alice@example.com,true}
-
-const parsed = parse(expanded);
-// { emp1: { id: 1, name: "Alice", email: "alice@example.com", admin: true } }
+**JavaScript / TypeScript**
+```bash
+npm install @legion24/xcon
 ```
 
-### Parameterized Macros
+**Python**
+```bash
+pip install xcon
+```
 
-```typescript
-const lmonWithMacros = `
+---
+
+## Usage
+
+### JavaScript / TypeScript
+
+```ts
+import { parse, stringify } from '@legion24/xcon';
+
+const data = [
+  { name: 'Alice', role: 'admin', active: true },
+  { name: 'Bob',   role: 'user',  active: false },
+];
+
+const xcon = stringify(data);
+// (name,role,active)
+// {Alice,admin,true}
+// {Bob,user,false}
+
+const parsed = parse(xcon);
+```
+
+### Python
+
+```python
+from xcon import parse, stringify
+
+data = [
+    {"name": "Alice", "role": "admin", "active": True},
+    {"name": "Bob",   "role": "user",  "active": False},
+]
+
+xcon = stringify(data)
+parsed = parse(xcon)
+```
+
+---
+
+## JSON Adapter
+
+XCON ships with a bidirectional JSON bridge. The adapter guarantees:
+
+```ts
+XCON.toJSON(XCON.fromJSON(x)) deepEquals x   // round-trip safe
+```
+
+- **Schema inference** — first JSON response infers an XCON schema and caches it for the endpoint
+- **Content-type negotiation** — clients send `Accept: application/xcon, application/json;q=0.9`; servers fall back to JSON when XCON isn't supported
+- **Drop-in adapters** — wrappers for `fetch`, `express`, `axios`, and `prisma` make XCON adoption a one-line change at the I/O boundary
+
+```ts
+// fetch
+import { xconFetch } from '@legion24/xcon/adapters/fetch';
+const users = await xconFetch('/api/users').then(r => r.json());
+
+// express
+import { xcon } from '@legion24/xcon/adapters/express';
+app.use(xcon());   // negotiates content-type, transcodes responses
+
+// axios
+import { xconAxios } from '@legion24/xcon/adapters/axios';
+const client = xconAxios.create({ baseURL: '/api' });
+
+// prisma
+import { xconResults } from '@legion24/xcon/adapters/prisma';
+const rows = xconResults(await prisma.user.findMany());
+```
+
+---
+
+## Macros
+
+Macros run before parsing and bind to callbacks across JS, Python, and Rust. The full reference is in [MACROS.md](./MACROS.md).
+
+| Macro | Purpose |
+|-------|---------|
+| `@ref` | Lazy field references |
+| `@lazy` | Deferred expansion strategies |
+| `@fn` | Function definitions, callback binding |
+| `@sql` | SQL source macros |
+| `@rest` | REST source macros |
+| `@cache` | Caching decorator macros |
+| `@macro` | Ambient context injection |
+
+```ts
+const x = `
 %row(id,name,email) = "{id,name,email}"
 
 (id,name,email)
 emp1:%row(1,Alice,alice@example.com)
 emp2:%row(2,Bob,bob@example.com)
 `;
-
-const expanded = expand(lmonWithMacros);
-// (id,name,email)
-// emp1:{1,Alice,alice@example.com}
-// emp2:{2,Bob,bob@example.com}
+const expanded = expand(x);
 ```
-
-### Expressions & Built-In Macros
-
-```typescript
-const lmonWithMacros = `
-%count = "3"
-(id,name,count,date)
-{1,Alice,%{%count+10},%_DATE_STR}
-{2,Bob,%{%count+20},%_DATE_STR}
-`;
-
-const expanded = expand(lmonWithMacros);
-// (id,name,count,date)
-// {1,Alice,13,2026-04-30}
-// {2,Bob,23,2026-04-30}
-```
-
-**Built-in macros** (always available):
-- `%_DATE_STR` — current date (YYYY-MM-DD)
-- `%_TIME_STR` — current time (HH:MM:SS)
-- `%_DATETIME_STR` — full ISO 8601 datetime
-- `%_TIMESTAMP` — Unix timestamp in seconds
-- `%_DAY_STR` — day of week name
-- `%_UUID` — random UUID v4
-- `%_ENV(VAR)` — environment variable value
-
-See [SPEC.md](./SPEC.md) for complete macro syntax and rules.
-
----
-
-## LLM Integration
-
-To get LMON output from an LLM, include the schema and a short example in your system prompt:
-
-```
-Respond using LMON format. Define the schema in a header on the first line, then one record per line.
-
-Example:
-(name,age,role)
-{Alice,30,admin}
-{Bob,25,user}
-```
-
-Parse the response with this library and convert to JSON for downstream use. If the model produces malformed output, fall back to JSON parsing with a warning.
-
----
-
-## When to Use LMON
-
-**Good fit:**
-- Batched structured output (3+ records per call)
-- Cost-sensitive, high-volume pipelines
-- Context-window-constrained workloads
-
-**Not ideal:**
-- Single-record responses (savings are modest)
-- Deeply nested, sparse, or irregular data
-- Human-facing APIs where JSON familiarity matters
 
 ---
 
@@ -229,14 +220,14 @@ Parse the response with this library and convert to JSON for downstream use. If 
 
 | Package | Language | Path |
 |---------|----------|------|
-| `lmon` | TypeScript / JavaScript | [`packages/lmon-ts`](./packages/lmon-ts) |
-| `lmon` | Python | [`packages/lmon-py`](./packages/lmon-py) |
+| `@legion24/xcon` | TypeScript / JavaScript | [`packages/xcon`](./packages/xcon) |
+| `xcon` | Python | [`packages/xcon-python`](./packages/xcon-python) |
 
 ---
 
 ## Contributing
 
-Issues and PRs are welcome. Please read [SPEC.md](./SPEC.md) before contributing to the parser — the spec is the source of truth.
+Issues and PRs are welcome. Read [SPEC.md](./SPEC.md) before contributing to the parser — the spec is the source of truth.
 
 ---
 

@@ -1,6 +1,125 @@
-# LMON Macros — Text Preprocessing
+# XCON Macros
 
-LMON macros are a text-level preprocessing system that runs **before** LMON parsing. Macros enable text substitution, parameterized templates, arithmetic evaluation, and access to system information (date, time, UUID, environment variables).
+XCON has two macro layers:
+
+1. **Decorator macros** (`@ref`, `@lazy`, `@fn`, `@sql`, `@rest`, `@cache`, `@macro`) — declarative annotations on schema fields and values that bind to callbacks across JS, Python, and Rust. Used for lazy loading, federation, computed fields, and ambient context.
+2. **Text-preprocessing macros** (`%`-prefixed) — a text-level substitution system that runs **before** XCON parsing. Used for templating, parameterized fragments, and built-in values (date, UUID, env vars).
+
+This document covers both. Decorator macros first; text macros from [Quick Start](#quick-start) onward.
+
+---
+
+## Decorator Macros
+
+Decorator macros are written inline in the schema or value position and resolve via host-language callbacks. They are **declarative** — the parser records the annotation; expansion happens on demand at evaluation time.
+
+Callback bindings are supported in **JavaScript / TypeScript**, **Python**, and **Rust**. Each runtime registers handler functions against the macro name; the parser invokes them when the document is evaluated.
+
+### `@ref` — lazy field references
+
+A pointer to data living elsewhere (another row, another document, another server). The reference is opaque until resolved.
+
+```
+(id,name,manager)
+{1,Alice,@ref(employees,7)}
+{7,Bob,@ref(employees,12)}
+```
+
+**Resolution:** the host registers a resolver keyed on the table/document name. The reference is fetched only when the field is accessed.
+
+```ts
+import { registerRef } from '@legion24/xcon';
+registerRef('employees', async (id) => db.employees.findOne({ id }));
+```
+
+**Languages:** JS/TS, Python, Rust.
+
+### `@lazy` — deferred expansion strategies
+
+Marks a field as not-yet-loaded with a strategy hint (`stream`, `paginate`, `on-demand`).
+
+```
+(id,name,attachments)
+{1,Alice,@lazy(stream,/api/users/1/attachments)}
+```
+
+**Resolution:** the runtime defers fetching until the consumer iterates the field. Streaming strategies wire into the XCON/stream layer; pagination strategies issue follow-up requests.
+
+**Languages:** JS/TS, Python, Rust.
+
+### `@fn` — function definitions and callback binding
+
+Defines a callable inline; the body is evaluated by the host language.
+
+```
+%define
+@fn(double,x) = "x * 2"
+@fn(greet,name) = "`hello ${name}`"
+
+(id,score)
+{1,@fn:double(21)}
+```
+
+**Resolution:** the host language compiles the body and binds it under the function name. Bodies are sandboxed per-runtime (Function constructor in JS, restricted `eval` in Python, dynamic dispatch in Rust).
+
+**Languages:** JS/TS (Function), Python (sandboxed), Rust (compile-time registration).
+
+### `@sql` — SQL source macros
+
+Annotates a value or row as the result of a SQL query.
+
+```
+(id,name,orders)
+{1,Alice,@sql("SELECT id,total FROM orders WHERE user_id=1")}
+```
+
+**Resolution:** the registered SQL backend executes the query lazily; the result becomes a nested XCON document with the query columns as its header.
+
+**Languages:** JS/TS, Python, Rust.
+
+### `@rest` — REST source macros
+
+Annotates a value as the result of an HTTP fetch.
+
+```
+(id,name,profile)
+{1,Alice,@rest(GET,/api/users/1/profile)}
+```
+
+**Resolution:** the registered HTTP client issues the request when the field is accessed; the response (XCON or JSON via the adapter) is folded in.
+
+**Languages:** JS/TS, Python, Rust.
+
+### `@cache` — caching decorator macros
+
+Wraps another macro with a cache policy.
+
+```
+{1,Alice,@cache(ttl=60,@rest(GET,/api/users/1/profile))}
+```
+
+**Resolution:** the runtime keys the cache on the wrapped macro's resolved arguments; subsequent reads within the TTL skip the underlying call.
+
+**Languages:** JS/TS, Python, Rust.
+
+### `@macro` — ambient context injection
+
+Pulls a value from the document's ambient context (set by the caller / server / session).
+
+```
+(id,name,tenant)
+{1,Alice,@macro(tenant_id)}
+```
+
+**Resolution:** the runtime looks up the name in the active `MacroContext`; LLM contexts, DB sessions, and HTTP middlewares can populate ambient values without modifying the document body.
+
+**Languages:** JS/TS, Python, Rust.
+
+---
+
+## Text-Preprocessing Macros (`%`)
+
+The `%`-prefixed text-level macro system runs **before** XCON parsing. It enables text substitution, parameterized templates, arithmetic evaluation, and access to system information (date, time, UUID, environment variables).
 
 ---
 
@@ -8,29 +127,29 @@ LMON macros are a text-level preprocessing system that runs **before** LMON pars
 
 **TypeScript / JavaScript:**
 ```typescript
-import { expand, parse } from 'lmon';
+import { expand, parse } from 'xcon';
 
-const lmonWithMacros = `
+const xconWithMacros = `
 %header = "(name,age)"
 %header
 alice:{Alice,30}
 `;
 
-const expanded = expand(lmonWithMacros);
+const expanded = expand(xconWithMacros);
 const data = parse(expanded);
 ```
 
 **Python:**
 ```python
-from lmon import expand, parse
+from xcon import expand, parse
 
-lmon_with_macros = '''
+xcon_with_macros = '''
 %header = "(name,age)"
 %header
 alice:{Alice,30}
 '''
 
-expanded = expand(lmon_with_macros)
+expanded = expand(xcon_with_macros)
 data = parse(expanded)
 ```
 
@@ -189,24 +308,24 @@ You can provide pre-defined macros that are visible from line 1:
 
 **TypeScript:**
 ```typescript
-import { expand, ExpandOptions } from 'lmon';
+import { expand, ExpandOptions } from 'xcon';
 
 const ctx = new Map([
   ['env', { body: 'prod', params: null, sourceLine: 0 }],
 ]);
 
-const expanded = expand(lmon, { initialContext: ctx });
+const expanded = expand(xcon, { initialContext: ctx });
 ```
 
 **Python:**
 ```python
-from lmon import expand, ExpandOptions, MacroDefinition
+from xcon import expand, ExpandOptions, MacroDefinition
 
 ctx = {
     'env': MacroDefinition(body='prod', params=None, source_line=0)
 }
 
-expanded = expand(lmon, ExpandOptions(initial_context=ctx))
+expanded = expand(xcon, ExpandOptions(initial_context=ctx))
 ```
 
 ### Redefinition Overwrites
@@ -255,7 +374,7 @@ Expansion is limited to depth 16 by default (prevents runaway recursion):
 
 ```typescript
 // Customize the limit:
-const expanded = expand(lmon, { maxDepth: 32 });
+const expanded = expand(xcon, { maxDepth: 32 });
 ```
 
 ---
@@ -296,7 +415,7 @@ Use non-strict mode to leave macro-like syntax for other tools to process.
 Macros report line and column information:
 
 ```
-LMONMacroError at line 2, column 5:
+XCONMacroError at line 2, column 5:
   Undefined macro 'missing'
   row:{1,%missing,value}
          ^
@@ -416,18 +535,18 @@ MacroContext = dict[str, MacroDefinition]
 
 ---
 
-## Integration with LMON Parsing
+## Integration with XCON Parsing
 
 Macros are a preprocessing step. Always expand before parsing:
 
 ```typescript
-const lmonWithMacros = `
+const xconWithMacros = `
 %header = "(name,age)"
 %header
 alice:{Alice,30}
 `;
 
-const expanded = expand(lmonWithMacros);
+const expanded = expand(xconWithMacros);
 const data = parse(expanded);
 ```
 
@@ -439,7 +558,7 @@ The macro system is **format-agnostic**: it transforms raw text to raw text, mak
 
 ### Why Text-Level?
 
-Macros operate on raw text before tokenization. This keeps the macro system independent of LMON's grammar and makes macros reusable for other formats.
+Macros operate on raw text before tokenization. This keeps the macro system independent of XCON's grammar and makes macros reusable for other formats.
 
 ### Why Positional Parameters?
 
@@ -470,11 +589,11 @@ A: Malformed definitions (missing quotes, unclosed parens) are left as-is and do
 A: No. Macro names are fixed identifiers; you can't substitute them. (Only bodies and arguments are expanded.)
 
 **Q: Performance?**
-A: The default depth limit is 16; most real macros expand in 1–3 passes. Linear in input size; no performance issues for typical LMON documents.
+A: The default depth limit is 16; most real macros expand in 1–3 passes. Linear in input size; no performance issues for typical XCON documents.
 
 ---
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Full LMON format specification
+- [SPEC.md](./SPEC.md) — Full XCON format specification
 - [README.md](./README.md) — Quick-start guide
